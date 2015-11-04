@@ -10,15 +10,13 @@ This code is by no means production quality and is for experimental purposes onl
 
 The tight coupling of SocketChannel with MemcachedNode which in turns couples with pretty much everything else is the culprit for the difficulty in performing a proper refactoring.
 
-In fact, had the authors used a composition pattern in MemcachedNode (decouple it again with SocketChannel), and only use part of it as parameter to other part of the world, it would be much easier to extend it.
-
 # Changes
 
 In order to achieve the effect using minimal effort, the fllowing changes are made:
 
 `DefaultConnectionFactory` is subclassed by `DefaultUDPSudoConnectionFactory` which simply overrides the factory method `createMemcachedNode` to produce UDP nodes `AsciiUDPMemcachedNodeImpl`, instead of TCP nodes. The factory method `createConnection` is also overriden to produce `MemcachedUDPSudoConnection`, which is (you might have guessed) a subclass of `MemcachedConnection`. In general, we should have lifted `MemcachedConnection` and `DefaultUDPSudoConnectionFactory` to two base classes and go from there, but we prefer this half-lifting because it is faster, although it is very confusing.
 
-In order to make this work, we need to decouple the `SocketChanel` from being created by the connections (you cannot hide or run). This is done by changing all signatures of `SocketChannel` to `AbstractSelectableChannel`. Then in the now parent class any reference to this variable will perform a cast to `SocketChannel` first. All methods containing such accesses are overriden in the now child class (UDP-related classes).
+In order to make this work, we need to decouple the `SocketChanel` from being created by the connections (you cannot hide or run). This is done by changing all signatures of `SocketChannel` to `AbstractSelectableChannel`. Then in the now parent class (such as `DefaultConnectionFactory` and `MemcachedConnection`) any reference to this variable will perform a cast to `SocketChannel` first. All methods containing such accesses are overriden in the now child class (UDP-related classes), and the only changes in these derived methods are casting `AbstractSelectionChannel` to `DatagramChannel`.
 
 We do this to `TCPMemcachedNodeImpl` too. In order to keep the naming more consistent (the authors made no reference to TCP at all but in this only class), we also renamed `TCPMemcachedNodeImpl` to `MemcachedNodeImpl`, then a subclass of it is created and named `UDPMemcachedNodeImpl`.
 
