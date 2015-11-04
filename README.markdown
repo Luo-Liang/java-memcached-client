@@ -1,3 +1,5 @@
+# UDP-capable SpyMemcached = Perfect Memcached Client.
+
 One of the problems with the near perfect SpyMemcached is the lack of UDP support. 
 As Facebook mentions in their 2013 NSDI paper, it might be desirable to issue GETs using UDP as TCP will not scale for excessively large number of transient connections.
 This slightly modified version of Spy works with UDP, at least it's goal is to make it work with UDP.
