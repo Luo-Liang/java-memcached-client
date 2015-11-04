@@ -26,7 +26,9 @@ package net.spy.memcached;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -57,7 +59,7 @@ public interface ConnectionFactory {
   /**
    * Create a new memcached node.
    */
-  MemcachedNode createMemcachedNode(SocketAddress sa, SocketChannel c,
+  MemcachedNode createMemcachedNode(SocketAddress sa, AbstractSelectableChannel c,
       int bufSize);
 
   /**

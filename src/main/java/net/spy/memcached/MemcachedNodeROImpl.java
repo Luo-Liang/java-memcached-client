@@ -26,8 +26,10 @@ package net.spy.memcached;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Collection;
 
 import net.spy.memcached.ops.Operation;
@@ -75,6 +77,11 @@ class MemcachedNodeROImpl implements MemcachedNode {
   }
 
   public SocketChannel getChannel() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setChannel(AbstractSelectableChannel to) {
     throw new UnsupportedOperationException();
   }
 
@@ -126,7 +133,7 @@ class MemcachedNodeROImpl implements MemcachedNode {
     throw new UnsupportedOperationException();
   }
 
-  public void registerChannel(SocketChannel ch, SelectionKey selectionKey) {
+  public void registerChannel(AbstractSelectableChannel ch, SelectionKey selectionKey) {
     throw new UnsupportedOperationException();
   }
 
@@ -135,10 +142,6 @@ class MemcachedNodeROImpl implements MemcachedNode {
   }
 
   public Operation removeCurrentWriteOp() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void setChannel(SocketChannel to) {
     throw new UnsupportedOperationException();
   }
 

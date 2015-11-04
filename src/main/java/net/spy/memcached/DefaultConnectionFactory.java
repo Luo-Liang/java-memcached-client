@@ -26,7 +26,9 @@ package net.spy.memcached;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -65,7 +67,7 @@ import net.spy.memcached.transcoders.Transcoder;
  *
  * </p>
  */
-public class DefaultConnectionFactory extends SpyObject implements
+class DefaultConnectionFactory extends SpyObject implements
     ConnectionFactory {
 
   /**
@@ -166,12 +168,12 @@ public class DefaultConnectionFactory extends SpyObject implements
     this(DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE);
   }
 
-  public MemcachedNode createMemcachedNode(SocketAddress sa, SocketChannel c,
+  public MemcachedNode createMemcachedNode(SocketAddress sa, AbstractSelectableChannel c,
       int bufSize) {
 
     OperationFactory of = getOperationFactory();
     if (of instanceof AsciiOperationFactory) {
-      return new AsciiMemcachedNodeImpl(sa, c, bufSize,
+      return new AsciiMemcachedNodeImpl(sa, (SocketChannel)c, bufSize,
           createReadOperationQueue(),
           createWriteOperationQueue(),
           createOperationQueue(),
@@ -184,7 +186,7 @@ public class DefaultConnectionFactory extends SpyObject implements
       if (getAuthDescriptor() != null) {
         doAuth = true;
       }
-      return new BinaryMemcachedNodeImpl(sa, c, bufSize,
+      return new BinaryMemcachedNodeImpl(sa, (SocketChannel)c, bufSize,
           createReadOperationQueue(),
           createWriteOperationQueue(),
           createOperationQueue(),
@@ -197,7 +199,6 @@ public class DefaultConnectionFactory extends SpyObject implements
       throw new IllegalStateException("Unhandled operation factory type " + of);
     }
   }
-
   /*
    * (non-Javadoc)
    *

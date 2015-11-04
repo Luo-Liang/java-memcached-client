@@ -32,12 +32,12 @@ import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.protocol.ProxyCallback;
-import net.spy.memcached.protocol.TCPMemcachedNodeImpl;
+import net.spy.memcached.protocol.MemcachedNodeImpl;
 
 /**
  * Memcached node for the ASCII protocol.
  */
-public final class AsciiMemcachedNodeImpl extends TCPMemcachedNodeImpl {
+public final class AsciiMemcachedNodeImpl extends MemcachedNodeImpl {
 
   public AsciiMemcachedNodeImpl(SocketAddress sa, SocketChannel c, int bufSize,
       BlockingQueue<Operation> rq, BlockingQueue<Operation> wq,

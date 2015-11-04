@@ -34,12 +34,12 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.ops.StoreOperation;
 import net.spy.memcached.protocol.ProxyCallback;
-import net.spy.memcached.protocol.TCPMemcachedNodeImpl;
+import net.spy.memcached.protocol.MemcachedNodeImpl;
 
 /**
  * Implementation of MemcachedNode for speakers of the binary protocol.
  */
-public class BinaryMemcachedNodeImpl extends TCPMemcachedNodeImpl {
+public class BinaryMemcachedNodeImpl extends MemcachedNodeImpl {
 
   private static final int MAX_GET_OPTIMIZATION_COUNT = 4096;
   private static final int MAX_SET_OPTIMIZATION_COUNT = 65535;

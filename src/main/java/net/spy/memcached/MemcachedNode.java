@@ -23,14 +23,14 @@
 
 package net.spy.memcached;
 
+import net.spy.memcached.ops.Operation;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Collection;
-
-import net.spy.memcached.ops.Operation;
 
 /**
  * Interface defining a connection to a memcached server.
@@ -177,17 +177,17 @@ public interface MemcachedNode {
   /**
    * Register a channel with this node.
    */
-  void registerChannel(SocketChannel ch, SelectionKey selectionKey);
-
-  /**
-   * Set the SocketChannel this node uses.
-   */
-  void setChannel(SocketChannel to);
+  void registerChannel(AbstractSelectableChannel ch, SelectionKey selectionKey);
 
   /**
    * Get the SocketChannel for this connection.
    */
-  SocketChannel getChannel();
+  AbstractSelectableChannel getChannel();
+
+  /**
+   * Set the SocketChannel this node uses.
+   */
+  void setChannel(AbstractSelectableChannel to);
 
   /**
    * Set the selection key for this node.

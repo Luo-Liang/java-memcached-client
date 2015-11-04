@@ -52,11 +52,8 @@ import net.spy.memcached.ops.SASLStepOperation;
 import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.ops.StoreOperation;
 import net.spy.memcached.ops.StoreType;
-import net.spy.memcached.ops.TapOperation;
 import net.spy.memcached.ops.UnlockOperation;
 import net.spy.memcached.ops.VersionOperation;
-import net.spy.memcached.tapmessage.RequestMessage;
-import net.spy.memcached.tapmessage.TapOpcode;
 
 import javax.security.auth.callback.CallbackHandler;
 import java.util.ArrayList;
@@ -205,23 +202,5 @@ public class BinaryOperationFactory extends BaseOperationFactory {
       OperationCallback cb) {
     return new SASLStepOperationImpl(mech, challenge, serverName, props, cbh,
         cb);
-  }
-
-  public TapOperation tapBackfill(String id, long date, OperationCallback cb) {
-    return new TapBackfillOperationImpl(id, date, cb);
-  }
-
-  public TapOperation tapCustom(String id, RequestMessage message,
-      OperationCallback cb) {
-    return new TapCustomOperationImpl(id, message, cb);
-  }
-
-  public TapOperation
-  tapAck(TapOpcode opcode, int opaque, OperationCallback cb) {
-    return new TapAckOperationImpl(opcode, opaque, cb);
-  }
-
-  public TapOperation tapDump(String id, OperationCallback cb) {
-    return new TapDumpOperationImpl(id, cb);
   }
 }
