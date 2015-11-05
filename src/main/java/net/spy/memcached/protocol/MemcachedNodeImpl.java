@@ -54,7 +54,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
     private final ByteBuffer rbuf;
     protected final ByteBuffer wbuf;
     protected final BlockingQueue<Operation> writeQ;
-    private final BlockingQueue<Operation> readQ;
+    protected final BlockingQueue<Operation> readQ;
     private final BlockingQueue<Operation> inputQueue;
     private final long opQueueMaxBlockTime;
     private final long authWaitTime;
@@ -172,7 +172,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
 
     // Prepare the pending operations. Return true if there are any pending
     // ops
-    private boolean preparePending() {
+    protected boolean preparePending() {
         // Copy the input queue into the write queue.
         copyInputQueue();
 
@@ -191,7 +191,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#fillWriteBuffer(boolean)
      */
-    public final void fillWriteBuffer(boolean shouldOptimize) {
+    public void fillWriteBuffer(boolean shouldOptimize) {
         if (toWrite == 0 && readQ.remainingCapacity() > 0) {
             getWbuf().clear();
             Operation o = getNextWritableOp();
@@ -232,7 +232,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
     }
 
 
-    private Operation getNextWritableOp() {
+    protected Operation getNextWritableOp() {
         Operation o = getCurrentWriteOp();
         while (o != null && o.getState() == OperationState.WRITE_QUEUED) {
             synchronized (o) {

@@ -11,6 +11,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelectableChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
@@ -49,9 +50,12 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
     }
     @Override
     public boolean isActive() {
-        return reconnectAttempt.get() == 0 && ((SocketChannel) getChannel()) != null
+        return reconnectAttempt.get() == 0 && ((DatagramChannel) getChannel()) != null
                 && ((DatagramChannel) getChannel()).isConnected();
     }
+
+    int UdpSequence = 0;
+    byte[] TestSequence = new byte[]{0,0,0,0,0,1,0,0};
 
     @Override
     public int writeSome() throws IOException {
@@ -62,5 +66,47 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
                 + " bytes for " + this;
         getLogger().debug("Wrote %d bytes", wrote);
         return wrote;
+    }
+
+    @Override
+    public void fillWriteBuffer(boolean shouldOptimize) {
+        if (toWrite == 0 && readQ.remainingCapacity() > 0) {
+            getWbuf().clear();
+            Operation o = getNextWritableOp();
+
+            while (o != null && toWrite < getWbuf().capacity()) {
+                synchronized (o) {
+                    assert o.getState() == OperationState.WRITING;
+
+                    ByteBuffer obuf = o.getBuffer();
+                    assert obuf != null : "Didn't get a write buffer from " + o;
+                    int bytesToCopy = Math.min(getWbuf().remaining()+8, obuf.remaining()+8);
+                    getWbuf().put(TestSequence);
+                    byte[] b = new byte[bytesToCopy-8];
+                    obuf.get(b);
+                    getWbuf().put(b);
+                    getLogger().debug("After copying stuff from %s: %s", o, getWbuf());
+                    if (!o.getBuffer().hasRemaining()) {
+                        o.writeComplete();
+                        transitionWriteItem();
+
+                        preparePending();
+                        if (shouldOptimize) {
+                            optimize();
+                        }
+
+                        o = getNextWritableOp();
+                    }
+                    toWrite += bytesToCopy;
+                }
+            }
+            getWbuf().flip();
+            assert toWrite <= getWbuf().capacity() : "toWrite exceeded capacity: "
+                    + this;
+            assert toWrite == getWbuf().remaining() : "Expected " + toWrite
+                    + " remaining, got " + getWbuf().remaining();
+        } else {
+            getLogger().debug("Buffer is full, skipping");
+        }
     }
 }

@@ -2,9 +2,14 @@ package net.spy.memcached;
 
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationException;
+import net.spy.memcached.ops.OperationState;
+import net.spy.memcached.ops.VBucketAware;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -237,39 +242,37 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
         }
         node.fixupOps();
     }
+
+    byte[] SanityCheck = new byte[8];
     @Override
-    protected void handleReads(final MemcachedNode node) throws IOException {
-        Operation currentOp = node.getCurrentReadOp();
-        ByteBuffer rbuf = node.getRbuf();
-        final DatagramChannel channel =(DatagramChannel)node.getChannel();
-        int read = channel.read(rbuf);
-        metrics.updateHistogram(OVERALL_AVG_BYTES_READ_METRIC, read);
-        if (read < 0) {
-            currentOp = handleReadsWhenChannelEndOfStream(currentOp, node, rbuf);
-        }
+    protected void readBufferAndLogMetrics(final Operation currentOp,
+                                           final ByteBuffer rbuf, final MemcachedNode node) throws IOException {
+        rbuf.get(SanityCheck);
+        currentOp.readFromBuffer(rbuf);
+        if (currentOp.getState() == OperationState.COMPLETE) {
+            getLogger().debug("Completed read op: %s and giving the next %d "
+                    + "bytes", currentOp, rbuf.remaining());
+            Operation op = node.removeCurrentReadOp();
+            assert op == currentOp : "Expected to pop " + currentOp + " got "
+                    + op;
 
-        while (read > 0) {
-            getLogger().debug("Read %d bytes", read);
-            rbuf.flip();
-            while (rbuf.remaining() > 0) {
-                if (currentOp == null) {
-                    throw new IllegalStateException("No read operation.");
-                }
-
-                long timeOnWire =
-                        System.nanoTime() - currentOp.getWriteCompleteTimestamp();
-                metrics.updateHistogram(OVERALL_AVG_TIME_ON_WIRE_METRIC,
-                        (int)(timeOnWire / 1000));
-                metrics.markMeter(OVERALL_RESPONSE_METRIC);
-                synchronized(currentOp) {
-                    readBufferAndLogMetrics(currentOp, rbuf, node);
-                }
-
-                currentOp = node.getCurrentReadOp();
+            if (op.hasErrored()) {
+                metrics.markMeter(OVERALL_RESPONSE_FAIL_METRIC);
+            } else {
+                metrics.markMeter(OVERALL_RESPONSE_SUCC_METRIC);
             }
-            rbuf.clear();
-            read = channel.read(rbuf);
-            node.completedRead();
+        } else if (currentOp.getState() == OperationState.RETRY) {
+            handleRetryInformation(currentOp.getErrorMsg());
+            getLogger().debug("Reschedule read op due to NOT_MY_VBUCKET error: "
+                    + "%s ", currentOp);
+            ((VBucketAware) currentOp).addNotMyVbucketNode(
+                    currentOp.getHandlingNode());
+            Operation op = node.removeCurrentReadOp();
+            assert op == currentOp : "Expected to pop " + currentOp + " got "
+                    + op;
+
+            retryOps.add(currentOp);
+            metrics.markMeter(OVERALL_RESPONSE_RETRY_METRIC);
         }
     }
 }

@@ -48,12 +48,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.channels.spi.AbstractSelectableChannel;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -116,11 +111,11 @@ public class MemcachedConnection extends SpyThread {
     "[MEM] Average Time on wire for operations (µs)";
   protected static final String OVERALL_RESPONSE_METRIC =
     "[MEM] Response Rate: All (Failure + Success + Retry)";
-  private static final String OVERALL_RESPONSE_RETRY_METRIC =
+  protected static final String OVERALL_RESPONSE_RETRY_METRIC =
     "[MEM] Response Rate: Retry";
-  private static final String OVERALL_RESPONSE_FAIL_METRIC =
+  protected static final String OVERALL_RESPONSE_FAIL_METRIC =
     "[MEM] Response Rate: Failure";
-  private static final String OVERALL_RESPONSE_SUCC_METRIC =
+  protected static final String OVERALL_RESPONSE_SUCC_METRIC =
     "[MEM] Response Rate: Success";
 
   /**
@@ -206,7 +201,7 @@ public class MemcachedConnection extends SpyThread {
   /**
    * Holds operations that need to be retried.
    */
-  private final List<Operation> retryOps;
+  protected final List<Operation> retryOps;
 
   /**
    * Holds all nodes that are scheduled for shutdown.
@@ -810,7 +805,7 @@ public class MemcachedConnection extends SpyThread {
   protected void handleReads(final MemcachedNode node) throws IOException {
     Operation currentOp = node.getCurrentReadOp();
     ByteBuffer rbuf = node.getRbuf();
-    final SocketChannel channel =(SocketChannel)node.getChannel();
+    final DatagramChannel channel =(DatagramChannel)node.getChannel();
     int read = channel.read(rbuf);
     metrics.updateHistogram(OVERALL_AVG_BYTES_READ_METRIC, read);
     if (read < 0) {
