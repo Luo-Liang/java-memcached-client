@@ -1,3 +1,32 @@
+# UDP-capable SpyMemcached = Perfect Memcached Client.
+
+One of the problems with the near perfect SpyMemcached is the lack of UDP support. 
+As Facebook mentions in their 2013 NSDI paper, it might be desirable to issue GETs using UDP as TCP will not scale for excessively large number of transient connections.
+This slightly modified version of Spy works with UDP, at least it's goal is to make it work with UDP.
+
+The refactor is absolutely going to be frown upon by Software Engineering people, but is indeed a quick dirty hack to make it work. I call it Half-Lifting (maybe there is another proper term of this).
+
+This code is by no means production quality and is for experimental purposes only.
+
+# Limitaion of the original Spy:
+
+The tight coupling of SocketChannel with MemcachedNode which in turns couples with pretty much everything else is the culprit for the difficulty in performing a proper refactoring.
+
+# Changes
+
+In order to achieve the effect using minimal effort, the fllowing changes are made:
+
+`DefaultConnectionFactory` is subclassed by `DefaultUDPSudoConnectionFactory` which simply overrides the factory method `createMemcachedNode` to produce UDP nodes `AsciiUDPMemcachedNodeImpl`, instead of TCP nodes. The factory method `createConnection` is also overriden to produce `MemcachedUDPSudoConnection`, which is (you might have guessed) a subclass of `MemcachedConnection`. In general, we should have lifted `MemcachedConnection` and `DefaultUDPSudoConnectionFactory` to two base classes and go from there, but we prefer this half-lifting because it is faster, although it is very confusing.
+
+In order to make this work, we need to decouple the `SocketChanel` from being created by the connections (you cannot hide or run). This is done by changing all signatures of `SocketChannel` to `AbstractSelectableChannel`. Then in the now parent class (such as `DefaultConnectionFactory` and `MemcachedConnection`) any reference to this variable will perform a cast to `SocketChannel` first. All methods containing such accesses are overriden in the now child class (UDP-related classes), and the only changes in these derived methods are casting `AbstractSelectionChannel` to `DatagramChannel`.
+
+We do this to `TCPMemcachedNodeImpl` too. In order to keep the naming more consistent (the authors made no reference to TCP at all but in this only class), we also renamed `TCPMemcachedNodeImpl` to `MemcachedNodeImpl`, then a subclass of it is created and named `UDPMemcachedNodeImpl`.
+
+We followed the authors flow and created `AsciiUDPMemcachedNode` and is concrete. It will be trivial to create a binary version of that based on the original code.
+
+Since `Tap` protocol is not supported in the vanila memcached, we removed it from all instances together with all tests.
+
+
 # Building
 
 Spymemcached can be compiled using Apache Ant by running the following
