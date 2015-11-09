@@ -26,7 +26,6 @@ We followed the authors flow and created `AsciiUDPMemcachedNode` and is concrete
 
 Since `Tap` protocol is not supported in the vanila memcached, we removed it from all instances together with all tests.
 
-
 # Building
 
 Spymemcached can be compiled using Apache Ant by running the following

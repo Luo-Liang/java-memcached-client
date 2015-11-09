@@ -239,7 +239,8 @@
     <ivy:report todir="${build.dir}"/>
   </target>
 
-  <target name="test" depends="compile, compile-test"
+  <!--<target name="test" depends="compile, compile-test" -->
+  <target name="test" depends="compile"
       description="Run Spymemcached unit tests">
     <echo>IPV4 address ${server.address_v4}</echo>
     <echo>IPV6 address ${server.address_v6}</echo>
@@ -281,6 +282,7 @@
         </junitreport>
     </target>
 
+<!--
   <target name="compile-test" depends="compile"
       description="Compile test classes">
     <mkdir dir="${build.test.classes}" />
@@ -298,6 +300,7 @@
       </classpath>
     </javac>
   </target>
+-->
 
   <!-- =======================================
         Section: Documentation Generation
@@ -309,10 +312,10 @@
         <include name="**/*.java" />
         <include name="**/*.html" />
       </srcfiles>
-      <srcfiles dir="${test.dir}">
+	  <!--    <srcfiles dir="${test.dir}">
         <include name="**/*.java" />
         <include name="**/*.html" />
-      </srcfiles>
+	  </srcfiles> -->
       <mapper type="merge" to="${build.javadoc}/index.html" />
     </uptodate>
   </target>
@@ -341,7 +344,7 @@
         <path refid="${name}.common.classpath" />
       </classpath>
     </javadoc>
-    <javadoc
+	<!--    <javadoc
       packagenames="src"
       sourcepath="${test.dir}"
       destdir="${build.javadoc.test}"
@@ -351,11 +354,11 @@
       windowtitle="${name}-test ${version} API"
       doctitle="${name}-test ${version} API"
       bottom="Copyright &amp;copy; 2006-2009 Dustin Sallings, 2009-2013 Couchbase, Inc.">
-      <packageset dir="${test.dir}">
+	  <packageset dir="${test.dir}">
         <include name="**" />
-      </packageset>
+	  </packageset>
       <classpath refid="test.classpath" />
-    </javadoc>
+	</javadoc> -->
   </target>
 
   <target name="docsjar" depends="docs"
@@ -429,12 +432,13 @@
       <fileset dir="${src.dir}" />
       <fileset dir="${build.src.dir}" />
     </jar>
-    <jar jarfile="${build.dir}/sources/${name}-test-${version}.jar">
+	<!--    <jar jarfile="${build.dir}/sources/${name}-test-${version}.jar">
       <fileset dir="${test.dir}" />
-    </jar>
+	</jar> -->
   </target>
 
-  <target name="jar" depends="compile,compile-test" description="Creates a jar file for the library">
+  <!--<target name="jar" depends="compile,compile-test" description="Creates a jar file for the library"> -->
+  <target name="jar" depends="compile" description="Creates a jar file for the library">
     <mkdir dir="${build.dir}/jars" />
     <jar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
       <manifest>

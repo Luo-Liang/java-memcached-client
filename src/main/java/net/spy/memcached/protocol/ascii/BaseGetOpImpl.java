@@ -41,7 +41,7 @@ import net.spy.memcached.util.StringUtils;
 /**
  * Base class for get and gets handlers.
  */
-abstract class BaseGetOpImpl extends OperationImpl {
+public abstract class BaseGetOpImpl extends OperationImpl {
 
   private static final OperationStatus END = new OperationStatus(true, "END",
     StatusCode.SUCCESS);
