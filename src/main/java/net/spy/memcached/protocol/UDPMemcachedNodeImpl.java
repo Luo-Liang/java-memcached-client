@@ -1,22 +1,17 @@
 package net.spy.memcached.protocol;
 
-import net.spy.memcached.*;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationState;
+import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.AbstractSelectableChannel;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -26,15 +21,37 @@ import java.util.concurrent.atomic.AtomicInteger;
  * TODO:Might need to lift both classes to form a common base..
  */
 public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
+
+    AtomicInteger sequence = new AtomicInteger(0);
+    Map<Short, Operation> readMap;
+
     public UDPMemcachedNodeImpl(SocketAddress sa, DatagramChannel dc, int bufSize,
-                                BlockingQueue<Operation> rq, BlockingQueue<Operation> wq,
+                                Map<Short, Operation> rMap, BlockingQueue<Operation> wq,
                                 BlockingQueue<Operation> iq, long opQueueMaxBlockTime,
                                 boolean waitForAuth, long dt, long authWaitTime, ConnectionFactory fact) {
-        super(sa,dc,bufSize,rq,wq,iq,opQueueMaxBlockTime,waitForAuth,dt,authWaitTime,fact);
+        super(sa, dc, bufSize, null, wq, iq, opQueueMaxBlockTime, waitForAuth, dt, authWaitTime, fact);
+        //readQ = writeQ = null; //do not allow.
+        readMap = rMap;
     }
 
     @Override
-    public  int getSelectionOps() {
+    public Operation getCurrentReadOp(short seq) {
+        return readMap.get(seq);
+    }
+
+    @Override
+    public Operation removeCurrentReadOp(short seq)
+    {
+        return readMap.remove(seq);
+    }
+
+    @Override
+    public boolean hasReadOp() throws InvalidStateException {
+        return readMap.size() != 0;
+    }
+
+    @Override
+    public int getSelectionOps() {
         int rv = 0;
         if (((DatagramChannel) getChannel()).isConnected()) {
             if (hasReadOp()) {
@@ -48,15 +65,15 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
         }
         return rv;
     }
+
     @Override
     public boolean isActive() {
         return reconnectAttempt.get() == 0 && ((DatagramChannel) getChannel()) != null
                 && ((DatagramChannel) getChannel()).isConnected();
     }
 
-    int UdpSequence = 0;
-    byte[] TestSequence = new byte[]{0,0,0,0,0,1,0,0};
-
+    //int UdpSequence = 0;
+    int last4Bytes = 1 << 16;
     @Override
     public int writeSome() throws IOException {
         int wrote = ((DatagramChannel) channel).write(wbuf);
@@ -69,8 +86,34 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
     }
 
     @Override
+    protected Operation getNextWritableOp() {
+        Operation o = getCurrentWriteOp();
+        while (o != null && o.getState() == OperationState.WRITE_QUEUED) {
+            synchronized (o) {
+                if (o.isCancelled()) {
+                    getLogger().debug("Not writing cancelled op.");
+                    Operation cancelledOp = removeCurrentWriteOp();
+                    assert o == cancelledOp;
+                } else if (o.isTimedOut(defaultOpTimeout)) {
+                    getLogger().debug("Not writing timed out op.");
+                    Operation timedOutOp = removeCurrentWriteOp();
+                    assert o == timedOutOp;
+                } else {
+                    o.writing();
+                    short seq = (short) sequence.getAndIncrement();
+                    o.setId(seq);
+                    readMap.put(seq, o);
+                    return o;
+                }
+                o = getCurrentWriteOp();
+            }
+        }
+        return o;
+    }
+
+    @Override
     public void fillWriteBuffer(boolean shouldOptimize) {
-        if (toWrite == 0 && readQ.remainingCapacity() > 0) {
+        if (toWrite == 0) {
             getWbuf().clear();
             Operation o = getNextWritableOp();
 
@@ -80,9 +123,11 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
 
                     ByteBuffer obuf = o.getBuffer();
                     assert obuf != null : "Didn't get a write buffer from " + o;
-                    int bytesToCopy = Math.min(getWbuf().remaining()+8, obuf.remaining()+8);
-                    getWbuf().put(TestSequence);
-                    byte[] b = new byte[bytesToCopy-8];
+                    int bytesToCopy = Math.min(getWbuf().remaining() + 8, obuf.remaining() + 8);
+                    getWbuf().putShort(o.getId());
+                    getWbuf().putShort((short)0);
+                    getWbuf().putInt(last4Bytes);
+                    byte[] b = new byte[bytesToCopy - 8];
                     obuf.get(b);
                     getWbuf().put(b);
                     getLogger().debug("After copying stuff from %s: %s", o, getWbuf());
@@ -108,5 +153,21 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
         } else {
             getLogger().debug("Buffer is full, skipping");
         }
+    }
+
+    @Override
+    public String toString() {
+        int sops = 0;
+        if (getSk() != null && getSk().isValid()) {
+            sops = getSk().interestOps();
+        }
+        int rsize = readMap.size() + (optimizedOp == null ? 0 : 1);
+        int wsize = readMap.size();
+        int isize = inputQueue.size();
+        return "{QA sa=" + getSocketAddress() + ", #Rops=" + rsize
+                + ", #Wops=" + wsize
+                + ", #iq=" + isize
+                + ", toWrite=" + toWrite
+                + ", interested=" + sops + "}";
     }
 }

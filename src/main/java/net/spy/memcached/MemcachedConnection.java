@@ -803,9 +803,9 @@ public class MemcachedConnection extends SpyThread {
    * @throws IOException can be raised during reading failures.
    */
   protected void handleReads(final MemcachedNode node) throws IOException {
-    Operation currentOp = node.getCurrentReadOp();
+    Operation currentOp = node.getCurrentReadOp((short) 0);
     ByteBuffer rbuf = node.getRbuf();
-    final DatagramChannel channel =(DatagramChannel)node.getChannel();
+    final SocketChannel channel =(SocketChannel)node.getChannel();
     int read = channel.read(rbuf);
     metrics.updateHistogram(OVERALL_AVG_BYTES_READ_METRIC, read);
     if (read < 0) {
@@ -829,7 +829,7 @@ public class MemcachedConnection extends SpyThread {
           readBufferAndLogMetrics(currentOp, rbuf, node);
         }
 
-        currentOp = node.getCurrentReadOp();
+        currentOp = node.getCurrentReadOp((short)0);
       }
       rbuf.clear();
       read = channel.read(rbuf);
@@ -851,7 +851,7 @@ public class MemcachedConnection extends SpyThread {
     if (currentOp.getState() == OperationState.COMPLETE) {
       getLogger().debug("Completed read op: %s and giving the next %d "
         + "bytes", currentOp, rbuf.remaining());
-      Operation op = node.removeCurrentReadOp();
+      Operation op = node.removeCurrentReadOp((short)0);
       assert op == currentOp : "Expected to pop " + currentOp + " got "
         + op;
 
@@ -866,7 +866,7 @@ public class MemcachedConnection extends SpyThread {
         + "%s ", currentOp);
       ((VBucketAware) currentOp).addNotMyVbucketNode(
         currentOp.getHandlingNode());
-      Operation op = node.removeCurrentReadOp();
+      Operation op = node.removeCurrentReadOp((short)0);
       assert op == currentOp : "Expected to pop " + currentOp + " got "
         + op;
 

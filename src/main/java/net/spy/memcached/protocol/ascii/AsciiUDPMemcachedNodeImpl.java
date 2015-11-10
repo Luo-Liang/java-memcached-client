@@ -9,6 +9,7 @@ import net.spy.memcached.protocol.UDPMemcachedNodeImpl;
 
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -17,11 +18,11 @@ import java.util.concurrent.BlockingQueue;
 public class AsciiUDPMemcachedNodeImpl extends UDPMemcachedNodeImpl {
 
     public AsciiUDPMemcachedNodeImpl(SocketAddress sa, DatagramChannel c, int bufSize,
-                                     BlockingQueue<Operation> rq, BlockingQueue<Operation> wq,
+                                     Map<Short,Operation> rMap, BlockingQueue<Operation> wq,
                                      BlockingQueue<Operation> iq, Long opQueueMaxBlockTimeNs, long dt,
                                      long at, ConnectionFactory fa) {
         // ASCII never does auth
-        super(sa, c, bufSize, rq, wq, iq, opQueueMaxBlockTimeNs, false, dt, at, fa);
+        super(sa, c, bufSize, rMap, wq, iq, opQueueMaxBlockTimeNs, false, dt, at, fa);
     }
 
     @Override

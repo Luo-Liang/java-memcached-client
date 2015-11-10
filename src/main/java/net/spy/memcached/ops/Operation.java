@@ -33,6 +33,8 @@ import net.spy.memcached.MemcachedNode;
  */
 public interface Operation {
 
+  public short getId();
+  public void setId(short seq);
   /**
    * Has this operation been cancelled?
    */

@@ -85,7 +85,7 @@ class MemcachedNodeROImpl implements MemcachedNode {
     throw new UnsupportedOperationException();
   }
 
-  public Operation getCurrentReadOp() {
+  public Operation getCurrentReadOp(short seq) {
     throw new UnsupportedOperationException();
   }
 
@@ -137,7 +137,7 @@ class MemcachedNodeROImpl implements MemcachedNode {
     throw new UnsupportedOperationException();
   }
 
-  public Operation removeCurrentReadOp() {
+  public Operation removeCurrentReadOp(short seq) {
     throw new UnsupportedOperationException();
   }
 

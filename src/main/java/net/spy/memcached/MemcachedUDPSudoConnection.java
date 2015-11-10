@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.*;
 
@@ -60,7 +61,6 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
         return connections;
     }
 
-    @Override
     protected void queueReconnect(final MemcachedNode node) {
         if (shutDown) {
             return;
@@ -183,6 +183,41 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
     }
 
     @Override
+    protected void handleReads(MemcachedNode node) throws IOException {
+        Operation currentOp = null;
+        ByteBuffer rbuf = node.getRbuf();
+        final DatagramChannel channel =(DatagramChannel)node.getChannel();
+        int read = channel.read(rbuf);
+        metrics.updateHistogram(OVERALL_AVG_BYTES_READ_METRIC, read);
+        while (read > 0) {
+            getLogger().debug("Read %d bytes", read);
+            rbuf.flip();
+            while (rbuf.remaining() > 0) {
+                byte[] Headers = new byte[8];
+                rbuf.get(Headers);
+                short sequenceNumber = (short)(Headers[0]<< 8 | Headers[1]);
+                currentOp = node.getCurrentReadOp(sequenceNumber);
+                long timeOnWire =
+                        System.nanoTime() - currentOp.getWriteCompleteTimestamp();
+                metrics.updateHistogram(OVERALL_AVG_TIME_ON_WIRE_METRIC,
+                        (int)(timeOnWire / 1000));
+                metrics.markMeter(OVERALL_RESPONSE_METRIC);
+                synchronized(currentOp) {
+                    readBufferAndLogMetrics(currentOp, rbuf, node);
+                    if(currentOp.getState()== OperationState.COMPLETE || currentOp.getState() == OperationState.RETRY)
+                    {
+                        node.removeCurrentReadOp(sequenceNumber);
+                    }
+                }
+                //currentOp = node.getCurrentReadOp();
+            }
+            rbuf.clear();
+            read = channel.read(rbuf);
+            node.completedRead();
+        }
+    }
+
+    @Override
     protected void potentiallyCloseLeakingChannel(final AbstractSelectableChannel ch,
                                                   final MemcachedNode node) {
         if (ch != null && !((DatagramChannel) ch).isConnected()) {
@@ -243,19 +278,16 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
         node.fixupOps();
     }
 
-    byte[] SanityCheck = new byte[8];
+    //byte[] SanityCheck = new byte[8];
     @Override
     protected void readBufferAndLogMetrics(final Operation currentOp,
-                                           final ByteBuffer rbuf, final MemcachedNode node) throws IOException {
-        rbuf.get(SanityCheck);
+                                           final ByteBuffer rbuf, MemcachedNode node) throws IOException {
+        //rbuf.get(SanityCheck);
         currentOp.readFromBuffer(rbuf);
         if (currentOp.getState() == OperationState.COMPLETE) {
             getLogger().debug("Completed read op: %s and giving the next %d "
                     + "bytes", currentOp, rbuf.remaining());
-            Operation op = node.removeCurrentReadOp();
-            assert op == currentOp : "Expected to pop " + currentOp + " got "
-                    + op;
-
+            Operation op = currentOp;
             if (op.hasErrored()) {
                 metrics.markMeter(OVERALL_RESPONSE_FAIL_METRIC);
             } else {
@@ -267,10 +299,7 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
                     + "%s ", currentOp);
             ((VBucketAware) currentOp).addNotMyVbucketNode(
                     currentOp.getHandlingNode());
-            Operation op = node.removeCurrentReadOp();
-            assert op == currentOp : "Expected to pop " + currentOp + " got "
-                    + op;
-
+            //Operation op = node.removeCurrentReadOp();
             retryOps.add(currentOp);
             metrics.markMeter(OVERALL_RESPONSE_RETRY_METRIC);
         }

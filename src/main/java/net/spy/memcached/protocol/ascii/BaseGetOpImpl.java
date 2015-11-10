@@ -194,7 +194,7 @@ public abstract class BaseGetOpImpl extends OperationImpl {
   @Override
   public final void initialize() {
     // Figure out the length of the request
-    int size = 6; // Enough for gets\r\n
+    int size = cmd.length()+2; // Enough for gets\r\n
     Collection<byte[]> keyBytes = KeyUtil.getKeyBytes(keys);
     for (byte[] k : keyBytes) {
       size += k.length;

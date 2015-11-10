@@ -72,12 +72,12 @@ public interface MemcachedNode {
   /**
    * Get the operation at the top of the queue that is requiring input.
    */
-  Operation getCurrentReadOp();
+  Operation getCurrentReadOp(short seq);
 
   /**
    * Remove the operation at the top of the queue that is requiring input.
    */
-  Operation removeCurrentReadOp();
+  Operation removeCurrentReadOp(short seq);
 
   /**
    * Get the operation at the top of the queue that has information available to

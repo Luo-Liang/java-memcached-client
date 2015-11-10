@@ -54,8 +54,8 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
     private final ByteBuffer rbuf;
     protected final ByteBuffer wbuf;
     protected final BlockingQueue<Operation> writeQ;
-    protected final BlockingQueue<Operation> readQ;
-    private final BlockingQueue<Operation> inputQueue;
+    private final BlockingQueue<Operation> readQ;
+    protected final BlockingQueue<Operation> inputQueue;
     private final long opQueueMaxBlockTime;
     private final long authWaitTime;
     private final ConnectionFactory connectionFactory;
@@ -67,7 +67,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
     private boolean shouldAuth = false;
     private CountDownLatch authLatch;
     private ArrayList<Operation> reconnectBlocked;
-    private long defaultOpTimeout;
+    protected long defaultOpTimeout;
     private volatile long lastReadTimestamp = System.nanoTime();
     private MemcachedConnection connection;
 
@@ -82,7 +82,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
         assert sa != null : "No SocketAddress";
         assert c != null : "No SocketChannel";
         assert bufSize > 0 : "Invalid buffer size: " + bufSize;
-        assert rq != null : "No operation read queue";
+        //assert rq != null : "No operation read queue";
         assert wq != null : "No operation write queue";
         assert iq != null : "No input queue";
         socketAddress = sa;
@@ -152,7 +152,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
         // Now cancel all the pending read operations. Might be better to
         // to requeue them.
         while (hasReadOp()) {
-            op = removeCurrentReadOp();
+            op = removeCurrentReadOp((short)0);
             if (op != getCurrentWriteOp()) {
                 getLogger().warn("Discarding partially completed op: %s", op);
                 op.cancel();
@@ -276,7 +276,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#getCurrentReadOp()
      */
-    public final Operation getCurrentReadOp() {
+    public Operation getCurrentReadOp(short seq) {
         return readQ.peek();
     }
 
@@ -285,7 +285,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#removeCurrentReadOp()
      */
-    public final Operation removeCurrentReadOp() {
+    public Operation removeCurrentReadOp(short seq) {
         return readQ.remove();
     }
 
@@ -294,7 +294,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#getCurrentWriteOp()
      */
-    public final Operation getCurrentWriteOp() {
+    public Operation getCurrentWriteOp() {
         return optimizedOp == null ? writeQ.peek() : optimizedOp;
     }
 
@@ -303,7 +303,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#removeCurrentWriteOp()
      */
-    public final Operation removeCurrentWriteOp() {
+    public Operation removeCurrentWriteOp() {
         Operation rv = optimizedOp;
         if (rv == null) {
             rv = writeQ.remove();
@@ -318,7 +318,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#hasReadOp()
      */
-    public final boolean hasReadOp() {
+    public boolean hasReadOp() {
         return !readQ.isEmpty();
     }
 
@@ -327,7 +327,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      *
      * @see net.spy.memcached.MemcachedNode#hasWriteOp()
      */
-    public final boolean hasWriteOp() {
+    public boolean hasWriteOp() {
         return !(optimizedOp == null && writeQ.isEmpty());
     }
 
@@ -480,7 +480,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
      * @see net.spy.memcached.MemcachedNode#toString()
      */
     @Override
-    public final String toString() {
+    public String toString() {
         int sops = 0;
         if (getSk() != null && getSk().isValid()) {
             sops = getSk().interestOps();
@@ -491,7 +491,7 @@ public abstract class MemcachedNodeImpl extends SpyObject implements MemcachedNo
         return "{QA sa=" + getSocketAddress() + ", #Rops=" + rsize
                 + ", #Wops=" + wsize
                 + ", #iq=" + isize
-                + ", topRop=" + getCurrentReadOp()
+                + ", topRop=" + getCurrentReadOp((short)0)
                 + ", topWop=" + getCurrentWriteOp()
                 + ", toWrite=" + toWrite
                 + ", interested=" + sops + "}";

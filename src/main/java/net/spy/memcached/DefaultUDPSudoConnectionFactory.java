@@ -1,5 +1,6 @@
 package net.spy.memcached;
 
+import net.spy.memcached.ops.Operation;
 import net.spy.memcached.protocol.ascii.AsciiOperationFactory;
 import net.spy.memcached.protocol.UDPMemcachedNodeImpl;
 import net.spy.memcached.protocol.ascii.AsciiUDPMemcachedNodeImpl;
@@ -9,7 +10,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.spi.AbstractSelectableChannel;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Liang Luo Local on 11/2/2015.
@@ -22,9 +25,9 @@ public class DefaultUDPSudoConnectionFactory extends DefaultConnectionFactory {
         OperationFactory of = getOperationFactory();
         if (of instanceof AsciiOperationFactory) {
             return new AsciiUDPMemcachedNodeImpl(sa,
-                    (DatagramChannel)dc,
+                    (DatagramChannel) dc,
                     bufSize,
-                    createReadOperationQueue(),
+                    new HashMap<>(),
                     createWriteOperationQueue(),
                     createOperationQueue(),
                     getOpQueueMaxBlockTime(),

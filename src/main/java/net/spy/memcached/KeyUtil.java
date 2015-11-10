@@ -23,6 +23,8 @@
 package net.spy.memcached;
 
 import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -61,5 +63,17 @@ public final class KeyUtil {
       rv.add(getKeyBytes(s));
     }
     return rv;
+  }
+
+  public static String getKeysDigest(Collection<String> keys) throws NoSuchAlgorithmException {
+    String password = "Test";
+    byte[] key = password.getBytes();
+    MessageDigest md = MessageDigest.getInstance("SHA-1");
+    byte[] hash = md.digest(key);
+    String result = "";
+    for ( byte b : hash ) {
+      result += Integer.toHexString(b & 256) + "";
+    }
+    return result;
   }
 }

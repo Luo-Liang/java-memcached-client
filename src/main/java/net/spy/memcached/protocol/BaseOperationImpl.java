@@ -44,6 +44,8 @@ import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.StatusCode;
 import net.spy.memcached.ops.TimedOutOperationStatus;
+import sun.plugin.dom.exception.InvalidStateException;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * Base class for protocol-specific operation implementations.
@@ -53,6 +55,7 @@ public abstract class BaseOperationImpl extends SpyObject implements Operation {
   /**
    * Status object for canceled operations.
    */
+  private short id = -1;
   public static final OperationStatus CANCELLED =
       new CancelledOperationStatus();
   public static final OperationStatus TIMED_OUT=
@@ -111,6 +114,18 @@ public abstract class BaseOperationImpl extends SpyObject implements Operation {
 
   public final OperationException getException() {
     return exception;
+  }
+
+  @Override
+  public short getId()
+  {
+    return id;
+  }
+
+  @Override
+  public void setId(short seq)
+  {
+    id =seq;
   }
 
   public final synchronized void cancel() {
