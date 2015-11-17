@@ -3,7 +3,6 @@ package net.spy.memcached.protocol;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationState;
-import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -22,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
 
-    AtomicInteger sequence = new AtomicInteger(0);
+    Short sequence = 0;
     Map<Short, Operation> readMap;
 
     public UDPMemcachedNodeImpl(SocketAddress sa, DatagramChannel dc, int bufSize,
@@ -46,7 +45,7 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
     }
 
     @Override
-    public boolean hasReadOp() throws InvalidStateException {
+    public boolean hasReadOp() {
         return readMap.size() != 0;
     }
 
@@ -100,7 +99,7 @@ public abstract class UDPMemcachedNodeImpl extends MemcachedNodeImpl{
                     assert o == timedOutOp;
                 } else {
                     o.writing();
-                    short seq = (short) sequence.getAndIncrement();
+                    short seq = sequence++;
                     o.setId(seq);
                     readMap.put(seq, o);
                     return o;

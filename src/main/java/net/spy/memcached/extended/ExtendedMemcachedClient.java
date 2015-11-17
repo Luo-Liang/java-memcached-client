@@ -43,7 +43,7 @@ public class ExtendedMemcachedClient extends MemcachedClient {
 
 
 
-    public GetFuture<Object> asyncCalculate(final Collection<String> keys, String cmd) throws NoSuchAlgorithmException {
+    public GetFuture<Object> asyncCalculate(final Collection<String> keys, final String cmd) throws NoSuchAlgorithmException {
 
         final CountDownLatch latch = new CountDownLatch(1);
         String sudoReuqestKey = KeyUtil.getKeysDigest(keys);
@@ -60,7 +60,7 @@ public class ExtendedMemcachedClient extends MemcachedClient {
 
             @Override
             public void gotData(String k, int flags, byte[] data) {
-                assert sudoReuqestKey.equals(k) : "Wrong key returned";
+                //assert sudoReuqestKey.equals(k) : "Wrong key returned";
                 //TODO:we haven't decided which keys to return yet. We currently choose to return a
                 //TODO:digest of all keys.
                 val = tcService.decode(tc, new CachedData(flags, data, tc.getMaxSize()));

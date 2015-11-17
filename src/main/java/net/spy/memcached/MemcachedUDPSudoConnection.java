@@ -193,9 +193,10 @@ public class MemcachedUDPSudoConnection extends MemcachedConnection {
             getLogger().debug("Read %d bytes", read);
             rbuf.flip();
             while (rbuf.remaining() > 0) {
-                byte[] Headers = new byte[8];
-                rbuf.get(Headers);
-                short sequenceNumber = (short)(Headers[0]<< 8 | Headers[1]);
+                long Headers = 0;
+                Headers = rbuf.getLong();
+                short sequenceNumber = (short)(Headers >>48);
+                //System.out.println("Current Sequence Number::" + sequenceNumber);
                 currentOp = node.getCurrentReadOp(sequenceNumber);
                 long timeOnWire =
                         System.nanoTime() - currentOp.getWriteCompleteTimestamp();
